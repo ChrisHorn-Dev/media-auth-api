@@ -2,8 +2,12 @@
 
 export interface BatchResultItem {
   filename: string;
+  analysis_id?: string;
+  timestamp?: string;
   prediction?: string;
   confidence?: number;
+  model?: string;
+  signature?: string;
   cached?: boolean;
   error?: string;
 }

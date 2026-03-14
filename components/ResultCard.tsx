@@ -1,9 +1,12 @@
 "use client";
 
 export interface AnalysisResult {
+  analysis_id: string;
+  timestamp: string;
   prediction: string;
   confidence: number;
   model: string;
+  signature: string;
   cached: boolean;
 }
 

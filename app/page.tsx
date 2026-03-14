@@ -34,7 +34,7 @@ export default function Home() {
         });
         const data = (await res.json()) as
           | { error?: string; details?: string }
-          | (AnalysisResult & { cached: boolean });
+          | AnalysisResult;
 
         if (!res.ok) {
           const err = data as { error?: string; details?: string };
