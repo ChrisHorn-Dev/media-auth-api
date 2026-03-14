@@ -24,9 +24,12 @@ file: <image binary>
 {
   "prediction": "likely_ai_generated",
   "confidence": 0.87,
-  "model": "ai-media-detector-v1"
+  "model": "ai-media-detector-v1",
+  "cached": false
 }
 ```
+
+`cached` is `true` when the result was served from cache, `false` when inference was run.
 
 **Errors:** `400` (no file, bad type, or >10 MB), `500` (missing `HUGGINGFACE_API_KEY`), `502` (inference failed; body has `error` and `details`).
 
@@ -44,12 +47,12 @@ Put `HUGGINGFACE_API_KEY=<token>` in `.env.local`. Token needs Inference access 
 ## Current capabilities
 
 - Single image upload and analysis via one API route.
-- File hash caching so identical uploads don’t trigger a second inference.
-- Basic test page: upload, submit, view result.
+- File hash caching: identical uploads return the cached result; responses include a `cached` boolean. Entries expire after a TTL (default 5 minutes). Cache is in-memory and resets on process restart.
+- Basic test page: upload, submit, view result. When a result is served from cache, the UI shows a short “Served from cache” line.
 
 ## Limitations
 
-Image only. One file per request. No batch, no rate limiting, no auth. Model is trained on older data. Cache is process-local and cleared on restart. UI is minimal—for testing the flow, not a finished product.
+Image only. One file per request. No batch, no rate limiting, no auth. Model is trained on older data. Cache is in-memory, TTL-based (default 5 min), and cleared on restart. UI is minimal—for testing the flow, not a finished product.
 
 ## Next steps
 
