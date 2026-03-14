@@ -73,35 +73,40 @@ export function UploadCard({ onUpload, disabled }: UploadCardProps) {
     [handleFiles]
   );
 
+  const inputId = "file-upload-input";
+
   return (
     <div className="w-full max-w-lg">
       <label
+        htmlFor={inputId}
         className={`
-          flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12
-          text-center transition-colors cursor-pointer
+          flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-8 py-12 text-center transition-colors
+          focus-within:outline-none focus-within:ring-2 focus-within:ring-zinc-400 focus-within:ring-offset-2
           ${disabled ? "pointer-events-none opacity-60" : ""}
-          ${dragActive ? "border-sky-500 bg-sky-50/50" : "border-zinc-300 bg-zinc-50/50 hover:border-zinc-400 hover:bg-zinc-100/50"}
+          ${dragActive ? "border-zinc-500 bg-zinc-100/80" : "border-zinc-400 bg-zinc-50/80 hover:border-zinc-500 hover:bg-zinc-100/60"}
         `}
         onDrop={onDrop}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
       >
         <input
+          id={inputId}
           type="file"
           accept={ALLOWED_TYPES}
           multiple
           onChange={onInputChange}
-          className="hidden"
+          className="sr-only"
           disabled={disabled}
+          aria-label="Choose image files to upload"
         />
-        <span className="text-4xl mb-2" aria-hidden>
+        <span className="mb-3 text-3xl text-zinc-400" aria-hidden>
           📁
         </span>
-        <span className="text-zinc-600 font-medium">
+        <span className="text-base font-medium text-zinc-700">
           {dragActive ? "Drop files here" : "Drag and drop images here"}
         </span>
-        <span className="text-zinc-500 text-sm mt-1">or click to browse</span>
-        <span className="text-zinc-400 text-xs mt-2">
+        <span className="mt-1 text-sm text-zinc-500">or click to browse</span>
+        <span className="mt-3 text-xs text-zinc-400">
           JPEG, PNG, WebP, GIF — max {MAX_SIZE_MB} MB, up to {MAX_FILES} files
         </span>
       </label>
