@@ -2,14 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { analyzeImage } from "@/lib/aiDetector";
 import { sha256Hex } from "@/lib/fileHash";
 import * as resultCache from "@/lib/resultCache";
-
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-];
+import { validateImageFile } from "@/lib/validateImage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,24 +24,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      return NextResponse.json(
-        {
-          error: `File too large. Maximum size is ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB.`,
-        },
-        { status: 400 }
-      );
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const type = file.type?.toLowerCase() ?? "";
-    if (!ALLOWED_IMAGE_TYPES.includes(type)) {
-      return NextResponse.json(
-        {
-          error: `Unsupported file type: ${type || "unknown"}. Allowed: ${ALLOWED_IMAGE_TYPES.join(", ")}.`,
-        },
-        { status: 400 }
-      );
-    }
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
