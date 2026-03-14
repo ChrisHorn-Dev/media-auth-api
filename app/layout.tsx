@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Media Authenticity API (Experimental)",
-  description: "Estimate whether uploaded media is likely AI-generated or authentic.",
+  description: "Classify an uploaded image as likely AI-generated or authentic.",
 };
 
 export default function RootLayout({

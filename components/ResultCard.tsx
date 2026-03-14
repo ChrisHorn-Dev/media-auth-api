@@ -16,7 +16,6 @@ function formatPrediction(prediction: string): string {
   return prediction;
 }
 
-/** Authenticity score: higher = more likely authentic. */
 function authenticityScore(prediction: string, confidence: number): number {
   if (prediction === "likely_authentic") return Math.round(confidence * 100);
   return Math.round((1 - confidence) * 100);

@@ -1,10 +1,6 @@
-/**
- * AI-generated media detection via HuggingFace Inference API.
- * Uses a pretrained image classification model (real vs AI-generated).
- */
+import { InferenceClient } from "@huggingface/inference";
 
 const HF_MODEL = "dima806/ai_vs_real_image_detection";
-const HF_API_BASE = "https://api-inference.huggingface.co/models";
 
 export type PredictionLabel = "likely_ai_generated" | "likely_authentic";
 
@@ -14,44 +10,26 @@ export interface AnalysisResult {
   model: string;
 }
 
-export interface HuggingFaceClassificationItem {
-  label: string;
-  score: number;
-}
-
-/**
- * Analyzes an image buffer using HuggingFace Inference API.
- * @param imageBuffer - Raw image bytes (e.g. from multipart upload)
- * @param apiKey - HuggingFace API token (required for inference)
- */
 export async function analyzeImage(
   imageBuffer: Buffer,
-  apiKey: string
+  apiKey: string,
+  contentType: string = "image/jpeg"
 ): Promise<AnalysisResult> {
-  const response = await fetch(`${HF_API_BASE}/${HF_MODEL}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/octet-stream",
-    },
-    body: imageBuffer,
+  const client = new InferenceClient(apiKey);
+  const blob = new Blob([new Uint8Array(imageBuffer)], { type: contentType });
+
+  const data = await client.imageClassification({
+    model: HF_MODEL,
+    data: blob,
   });
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Model request failed (${response.status}): ${text || response.statusText}`
-    );
-  }
-
-  const data = (await response.json()) as HuggingFaceClassificationItem[];
   if (!Array.isArray(data) || data.length === 0) {
     throw new Error("Invalid model response: empty or non-array");
   }
 
-  // Model labels: REAL | FAKE (FAKE = AI-generated)
-  const fakeItem = data.find((x) => x.label.toUpperCase() === "FAKE");
-  const realItem = data.find((x) => x.label.toUpperCase() === "REAL");
+  // REAL / FAKE from model; FAKE = AI-generated
+  const fakeItem = data.find((x) => x.label?.toUpperCase() === "FAKE");
+  const realItem = data.find((x) => x.label?.toUpperCase() === "REAL");
   const fakeScore = fakeItem?.score ?? 0;
   const realScore = realItem?.score ?? 0;
 

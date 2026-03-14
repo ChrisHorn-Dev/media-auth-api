@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeImage } from "@/lib/aiDetector";
+import { sha256Hex } from "@/lib/fileHash";
+import * as resultCache from "@/lib/resultCache";
 
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -14,7 +16,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.HUGGINGFACE_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Server configuration error: HUGGINGFACE_API_KEY not set" },
+        { error: "HUGGINGFACE_API_KEY is not set" },
         { status: 500 }
       );
     }
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { error: "No file provided. Use multipart form field 'file'." },
+        { error: "No file provided. Send a multipart form with field 'file'." },
         { status: 400 }
       );
     }
@@ -51,12 +53,19 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const result = await analyzeImage(buffer, apiKey);
+    const hash = sha256Hex(buffer);
+    const cached = resultCache.get(hash);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
+    const result = await analyzeImage(buffer, apiKey, type);
+    resultCache.set(hash, result);
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Analysis failed";
+    const message = err instanceof Error ? err.message : "Inference failed";
     return NextResponse.json(
-      { error: "Model failure", details: message },
+      { error: "Inference failed", details: message },
       { status: 502 }
     );
   }

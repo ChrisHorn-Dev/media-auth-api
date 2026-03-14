@@ -33,7 +33,8 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || data.details || `Request failed (${res.status})`);
+        const detail = data.details ? ` — ${data.details}` : "";
+        setError(`${data.error || `Request failed (${res.status})`}${detail}`);
         setStatus("error");
         return;
       }
@@ -54,7 +55,7 @@ export default function Home() {
             Media Authenticity API <span className="text-zinc-500">(Experimental)</span>
           </h1>
           <p className="mt-3 text-zinc-600">
-            Upload an image or audio file to estimate whether the media may be AI-generated.
+            Upload an image to see whether the model classifies it as likely AI-generated or authentic.
           </p>
         </header>
 
