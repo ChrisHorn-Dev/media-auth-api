@@ -80,6 +80,8 @@ export default function Home() {
     }
   };
 
+  const isUploading = status === "uploading";
+
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
@@ -94,12 +96,19 @@ export default function Home() {
         </header>
 
         <section className="flex flex-col items-center gap-8">
-          <UploadCard onUpload={handleUpload} disabled={status === "uploading"} />
+          <UploadCard onUpload={handleUpload} disabled={isUploading} />
 
-          {status === "uploading" && (
-            <div className="flex items-center gap-2 text-zinc-600" role="status" aria-live="polite">
-              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-              <span>Processing…</span>
+          {isUploading && (
+            <div
+              className="flex w-full max-w-lg items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-10 text-zinc-600"
+              role="status"
+              aria-live="polite"
+            >
+              <span
+                className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin"
+                aria-hidden
+              />
+              <span className="text-sm font-medium">Analyzing images…</span>
             </div>
           )}
 
