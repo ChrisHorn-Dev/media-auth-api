@@ -1,9 +1,10 @@
 "use client";
 
-interface AnalysisResult {
+export interface AnalysisResult {
   prediction: string;
   confidence: number;
   model: string;
+  cached: boolean;
 }
 
 interface ResultCardProps {
@@ -51,6 +52,9 @@ export function ResultCard({ result }: ResultCardProps) {
         </div>
       </div>
       <p className="mt-4 text-xs text-zinc-400">Model: {result.model}</p>
+      {result.cached && (
+        <p className="mt-2 text-xs text-zinc-400">Served from cache</p>
+      )}
     </div>
   );
 }
