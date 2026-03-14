@@ -3,30 +3,67 @@
 import { useState } from "react";
 import { UploadCard } from "@/components/UploadCard";
 import { ResultCard, type AnalysisResult } from "@/components/ResultCard";
+import {
+  BatchResultList,
+  type BatchResultItem,
+} from "@/components/BatchResultList";
 
 type Status = "idle" | "uploading" | "done" | "error";
 
 export default function Home() {
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [batchResults, setBatchResults] = useState<BatchResultItem[] | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpload = async (file: File) => {
+  const handleUpload = async (files: File[]) => {
     setError(null);
     setResult(null);
+    setBatchResults(null);
     setStatus("uploading");
 
-    const formData = new FormData();
-    formData.set("file", file);
+    if (files.length === 1) {
+      const formData = new FormData();
+      formData.set("file", files[0]);
+      try {
+        const res = await fetch("/api/analyze", {
+          method: "POST",
+          body: formData,
+        });
+        const data = (await res.json()) as
+          | { error?: string; details?: string }
+          | (AnalysisResult & { cached: boolean });
 
+        if (!res.ok) {
+          const err = data as { error?: string; details?: string };
+          const detail = err.details ? ` — ${err.details}` : "";
+          setError(`${err.error || `Request failed (${res.status})`}${detail}`);
+          setStatus("error");
+          return;
+        }
+        setResult(data as AnalysisResult);
+        setStatus("done");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Network error");
+        setStatus("error");
+      }
+      return;
+    }
+
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append("files[]", file);
+    }
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetch("/api/analyze/batch", {
         method: "POST",
         body: formData,
       });
       const data = (await res.json()) as
         | { error?: string; details?: string }
-        | (AnalysisResult & { cached: boolean });
+        | { results: BatchResultItem[] };
 
       if (!res.ok) {
         const err = data as { error?: string; details?: string };
@@ -35,8 +72,7 @@ export default function Home() {
         setStatus("error");
         return;
       }
-
-      setResult(data as AnalysisResult);
+      setBatchResults((data as { results: BatchResultItem[] }).results);
       setStatus("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
@@ -52,7 +88,8 @@ export default function Home() {
             Media Authenticity API <span className="text-zinc-500">(Experimental)</span>
           </h1>
           <p className="mt-3 text-zinc-600">
-            Upload an image to see whether the model classifies it as likely AI-generated or authentic.
+            Upload one or more images to see whether the model classifies them as
+            likely AI-generated or authentic.
           </p>
         </header>
 
@@ -77,6 +114,10 @@ export default function Home() {
 
           {status === "done" && result && (
             <ResultCard result={result} />
+          )}
+
+          {status === "done" && batchResults && batchResults.length > 0 && (
+            <BatchResultList results={batchResults} />
           )}
         </section>
       </main>
