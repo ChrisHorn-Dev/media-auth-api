@@ -56,12 +56,12 @@ export async function POST(request: NextRequest) {
     const hash = sha256Hex(buffer);
     const cached = resultCache.get(hash);
     if (cached) {
-      return NextResponse.json(cached);
+      return NextResponse.json({ ...cached, cached: true });
     }
 
     const result = await analyzeImage(buffer, apiKey, type);
     resultCache.set(hash, result);
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, cached: false });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Inference failed";
     return NextResponse.json(
