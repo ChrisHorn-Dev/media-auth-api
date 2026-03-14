@@ -81,6 +81,8 @@ export default function Home() {
   };
 
   const isUploading = status === "uploading";
+  const hasResults = (result != null) || (batchResults != null && batchResults.length > 0);
+  const showEmptyState = !hasResults && !isUploading;
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
@@ -127,6 +129,15 @@ export default function Home() {
 
           {status === "done" && batchResults && batchResults.length > 0 && (
             <BatchResultList results={batchResults} />
+          )}
+
+          {showEmptyState && (
+            <div
+              className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white py-10 text-center text-sm text-zinc-500"
+              role="status"
+            >
+              No analyses yet. Upload images to test the API.
+            </div>
           )}
         </section>
       </main>
