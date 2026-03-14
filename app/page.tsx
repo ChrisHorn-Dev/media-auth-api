@@ -2,13 +2,7 @@
 
 import { useState } from "react";
 import { UploadCard } from "@/components/UploadCard";
-import { ResultCard } from "@/components/ResultCard";
-
-interface AnalysisResult {
-  prediction: string;
-  confidence: number;
-  model: string;
-}
+import { ResultCard, type AnalysisResult } from "@/components/ResultCard";
 
 type Status = "idle" | "uploading" | "done" | "error";
 
@@ -30,16 +24,19 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+      const data = (await res.json()) as
+        | { error?: string; details?: string }
+        | (AnalysisResult & { cached: boolean });
 
       if (!res.ok) {
-        const detail = data.details ? ` — ${data.details}` : "";
-        setError(`${data.error || `Request failed (${res.status})`}${detail}`);
+        const err = data as { error?: string; details?: string };
+        const detail = err.details ? ` — ${err.details}` : "";
+        setError(`${err.error || `Request failed (${res.status})`}${detail}`);
         setStatus("error");
         return;
       }
 
-      setResult(data);
+      setResult(data as AnalysisResult);
       setStatus("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Network error");
