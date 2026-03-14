@@ -87,59 +87,78 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <main className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
-        <header className="mb-10 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Media Authenticity API <span className="text-zinc-500">(Experimental)</span>
+        <header className="mb-8 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+            Media Authenticity API
           </h1>
-          <p className="mt-3 text-zinc-600">
-            Upload one or more images to see whether the model classifies them as
-            likely AI-generated or authentic.
+          <p className="mt-2 text-sm text-zinc-600">
+            Test image analysis — upload images to classify as likely AI-generated or authentic.
           </p>
         </header>
 
-        <section className="flex flex-col items-center gap-8">
-          <UploadCard onUpload={handleUpload} disabled={isUploading} />
+        <div className="space-y-8">
+          <section className="flex flex-col items-center" aria-labelledby="upload-heading">
+            <h2 id="upload-heading" className="sr-only">
+              Upload
+            </h2>
+            <UploadCard onUpload={handleUpload} disabled={isUploading} />
+          </section>
 
-          {isUploading && (
-            <div
-              className="flex w-full max-w-lg items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-10 text-zinc-600"
-              role="status"
-              aria-live="polite"
-            >
-              <span
-                className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin"
-                aria-hidden
-              />
-              <span className="text-sm font-medium">Analyzing images…</span>
-            </div>
-          )}
+          <section
+            className="flex flex-col items-center"
+            aria-labelledby="results-heading"
+            aria-busy={isUploading}
+          >
+            <h2 id="results-heading" className="sr-only">
+              Results
+            </h2>
 
-          {status === "error" && error && (
-            <div
-              className="w-full max-w-lg rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-              role="alert"
-            >
-              {error}
-            </div>
-          )}
+            {isUploading && (
+              <div
+                className="flex w-full max-w-lg items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white py-10 text-zinc-600"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  className="h-5 w-5 flex-shrink-0 rounded-full border-2 border-zinc-400 border-t-transparent animate-spin"
+                  aria-hidden
+                />
+                <span className="text-sm font-medium">Analyzing images…</span>
+              </div>
+            )}
 
-          {status === "done" && result && (
-            <ResultCard result={result} />
-          )}
+            {!isUploading && status === "error" && error && (
+              <div
+                className="w-full max-w-lg rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+                role="alert"
+              >
+                {error}
+              </div>
+            )}
 
-          {status === "done" && batchResults && batchResults.length > 0 && (
-            <BatchResultList results={batchResults} />
-          )}
+            {!isUploading && result != null && (
+              <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-zinc-50/50 p-5">
+                <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Results
+                </h3>
+                <ResultCard result={result} />
+              </div>
+            )}
 
-          {showEmptyState && (
-            <div
-              className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white py-10 text-center text-sm text-zinc-500"
-              role="status"
-            >
-              No analyses yet. Upload images to test the API.
-            </div>
-          )}
-        </section>
+            {!isUploading && batchResults != null && batchResults.length > 0 && (
+              <BatchResultList results={batchResults} />
+            )}
+
+            {showEmptyState && (
+              <div
+                className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white py-10 text-center text-sm text-zinc-500"
+                role="status"
+              >
+                No analyses yet. Upload images to test the API.
+              </div>
+            )}
+          </section>
+        </div>
       </main>
     </div>
   );
