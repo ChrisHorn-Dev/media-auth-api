@@ -8,7 +8,7 @@ The repo includes a **basic web interface** for testing the flow: upload an imag
 
 **How it works:** Client sends the file to `POST /api/analyze`. The Next.js route validates type and size, hashes the buffer (SHA256), and looks up the hash in a result cache. If found, it returns the cached result. If not, it calls the Hugging Face inference client with the image blob; the model returns REAL/FAKE scores, which we map to the response shape and cache by hash.
 
-**Stack:** Next.js (App Router), React, TypeScript, Tailwind. One API route. `@huggingface/inference` for classification. In-memory cache (no Redis).
+**Stack:** Next.js (App Router), React, TypeScript, Tailwind. API routes for single and batch analysis. `@huggingface/inference` for classification. In-memory cache (no Redis).
 
 ## API
 
@@ -33,6 +33,33 @@ file: <image binary>
 
 **Errors:** `400` (no file, bad type, or >10 MB), `500` (missing `HUGGINGFACE_API_KEY`), `502` (inference failed; body has `error` and `details`).
 
+### Batch analysis
+
+```http
+POST /api/analyze/batch
+Content-Type: multipart/form-data
+files[]: <image binary> (repeat for each file, max 5)
+```
+
+Same validation as single-image (type, size). Per-file errors are returned in the result entry instead of failing the whole request.
+
+**200** — example:
+
+```json
+{
+  "results": [
+    {
+      "filename": "example.png",
+      "prediction": "likely_ai_generated",
+      "confidence": 0.91,
+      "cached": false
+    }
+  ]
+}
+```
+
+Maximum 5 files per request.
+
 ## Run locally
 
 ```bash
@@ -46,13 +73,13 @@ Put `HUGGINGFACE_API_KEY=<token>` in `.env.local`. Token needs Inference access 
 
 ## Current capabilities
 
-- Single image upload and analysis via one API route.
+- Single image upload and analysis via `POST /api/analyze`; batch analysis (up to 5 images) via `POST /api/analyze/batch`.
 - File hash caching: identical uploads return the cached result; responses include a `cached` boolean. Entries expire after a TTL (default 5 minutes). Cache is in-memory and resets on process restart.
-- Basic test page: upload, submit, view result. When a result is served from cache, the UI shows a short “Served from cache” line.
+- Basic test page: upload one or multiple images (up to 5), submit to single or batch endpoint, view result(s). When a result is served from cache, the UI shows a short “Served from cache” or “(cached)” line.
 
 ## Limitations
 
-Image only. One file per request. No batch, no rate limiting, no auth. Model is trained on older data. Cache is in-memory, TTL-based (default 5 min), and cleared on restart. UI is minimal—for testing the flow, not a finished product.
+Image only. Single request: one file; batch: up to 5 files. No rate limiting, no auth. Model is trained on older data. Cache is in-memory, TTL-based (default 5 min), and cleared on restart. UI is minimal—for testing the flow, not a finished product.
 
 ## Next steps
 
