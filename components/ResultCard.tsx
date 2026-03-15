@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import type { SignedAnalysisRecord } from "@/lib/analysis/types";
+import { buildVerifyPayload } from "@/lib/verify/buildVerifyPayload";
 
 export type AnalysisResult = SignedAnalysisRecord | LegacyResult;
 interface LegacyResult {
@@ -12,6 +14,8 @@ interface LegacyResult {
   signature: string;
   cached: boolean;
 }
+
+type VerifyState = "idle" | "verifying" | "valid" | "invalid";
 
 interface ResultCardProps {
   result: AnalysisResult;
@@ -44,11 +48,44 @@ function authenticityScore(prediction: string, confidence: number): number {
 }
 
 export function ResultCard({ result }: ResultCardProps) {
+  const [verifyState, setVerifyState] = useState<VerifyState>("idle");
+  const [verifyReason, setVerifyReason] = useState<string | null>(null);
+
   const prediction = getPrediction(result);
   const confidence = getConfidence(result);
   const score = authenticityScore(prediction, confidence);
   const predictionLabel = formatPrediction(prediction);
   const model = getModel(result);
+  const canVerify = buildVerifyPayload(result) != null;
+
+  const handleVerify = async () => {
+    const body = buildVerifyPayload(result);
+    if (!body) return;
+    setVerifyState("verifying");
+    setVerifyReason(null);
+    try {
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = (await res.json()) as
+        | { valid: true }
+        | { valid: false; reason?: string }
+        | { error?: string; details?: string };
+      if (res.ok && "valid" in data) {
+        setVerifyState(data.valid ? "valid" : "invalid");
+        setVerifyReason(!data.valid && data.reason ? data.reason : null);
+      } else {
+        const err = data as { error?: string; details?: string };
+        setVerifyState("invalid");
+        setVerifyReason(err.details ?? err.error ?? "Verification request failed");
+      }
+    } catch {
+      setVerifyState("invalid");
+      setVerifyReason("Network error");
+    }
+  };
 
   return (
     <div
@@ -78,6 +115,30 @@ export function ResultCard({ result }: ResultCardProps) {
       <p className="mt-4 text-xs text-zinc-400">Detector: {model}</p>
       {result.cached && (
         <p className="mt-2 text-xs text-zinc-400">Served from cache</p>
+      )}
+
+      {canVerify && (
+        <div className="mt-5 border-t border-zinc-200 pt-4">
+          <button
+            type="button"
+            onClick={handleVerify}
+            disabled={verifyState === "verifying"}
+            className="rounded-lg border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60"
+            aria-live="polite"
+          >
+            {verifyState === "verifying" ? "Verifying…" : "Verify this result"}
+          </button>
+          {verifyState === "valid" && (
+            <p className="mt-2 text-sm font-medium text-green-700" role="status">
+              Signature valid
+            </p>
+          )}
+          {verifyState === "invalid" && (
+            <p className="mt-2 text-sm text-amber-700" role="status">
+              {verifyReason ?? "Signature invalid"}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
