@@ -12,9 +12,9 @@ Single and batch image analysis (JPEG, PNG, WebP, GIF, max 10 MB), file-hash cac
 
 ## API
 
-**Single:** `POST /api/analyze` — `multipart/form-data`, field `file`. Optional query or form field `detector_id` to choose detector (e.g. `huggingface-image-v1`, `huggingface-image-v2`). Returns a signed analysis record: `analysis_id`, `timestamp`, `media`, `request`, `verdict`, `detectors`, `cached`, `signature`.
+**Single:** `POST /api/analyze` — `multipart/form-data`, field `file`. Optional `mode`: `single` (one detector) or `ensemble` (run all compatible image detectors and aggregate verdict). Optional `detector_id`: `huggingface-image-v1` or `huggingface-image-v2` (for single mode). Invalid `detector_id` returns 400 with a clear message. Returns a signed analysis record: `analysis_id`, `timestamp`, `media`, `request` (includes `mode`), `verdict`, `detectors`, `cached`, `signature`.
 
-**Batch:** `POST /api/analyze/batch` — field `files[]`, max 5. Optional `detector_id` as above. Returns `{ results: [ { filename, record } | { filename, error } ] }`.
+**Batch:** `POST /api/analyze/batch` — field `files[]`, max 5. Same optional `mode` and `detector_id`. Returns `{ results: [ { filename, record } | { filename, error } ] }`.
 
 **Image validation:** Max 10 MB; dimensions between 32 and 4096 px per side. Unsupported format or dimensions return 400 with a clear message.
 
@@ -40,7 +40,7 @@ curl -s -X POST http://localhost:3000/api/verify \
   -d "$(echo "$ANALYSIS" | jq '{ analysis_id, timestamp, prediction: .verdict.prediction, confidence: .verdict.confidence, model: (.detectors[0].model // .verdict.detectorId), signature }')"
 ```
 
-Example verify request body. The `model` value comes from the analysis response (`verdict.detectorId` or `detectors[0].model`):
+Example verify request body. The `model` value comes from the analysis response (`verdict.detectorId` or `detectors[0].model`). For ensemble results, `model` is `"ensemble"`.
 
 ```json
 {
@@ -84,7 +84,7 @@ Put these in `.env.local`. Missing required values return 500 with a clear messa
 | `huggingface-image-v1` | Hugging Face image authenticity | `dima806/ai_vs_real_image_detection` |
 | `huggingface-image-v2` | Hugging Face image (alternate) | `capcheck/ai-image-detection` |
 
-If `detector_id` is omitted, the first compatible detector is used. Both models are trained for Real vs Fake/AI-generated classification; performance on very new generators may vary and models can be swapped in code when better options are available.
+**Mode:** `single` (default) runs one detector (chosen by `detector_id` or first compatible). `ensemble` runs all compatible image detectors and aggregates: same prediction → average confidence; differing predictions → conservative verdict (prefer `likely_ai_generated`). Response `verdict.strategy` is `"single"` or `"ensemble"`; `detectors` array holds per-detector results. If `detector_id` is omitted in single mode, the first compatible detector is used. Invalid `detector_id` returns 400. Both models are trained for Real vs Fake/AI-generated classification; performance on very new generators may vary.
 
 ### Logging
 

@@ -40,6 +40,12 @@ CONTRIBUTING.md
 /docs/
 /lib/detectors/**/README.md
 
+# editor/IDE and agent artifacts (do not commit)
+.cursor/
+*.cursorrules
+AGENTS.md
+RULE.md
+
 # vercel
 .vercel
 
