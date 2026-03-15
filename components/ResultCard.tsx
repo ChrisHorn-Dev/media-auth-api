@@ -36,6 +36,18 @@ function getModel(result: AnalysisResult): string {
   return (result as LegacyResult).model;
 }
 
+function getStrategy(result: AnalysisResult): "single" | "ensemble" | undefined {
+  if ("verdict" in result && "strategy" in result.verdict)
+    return result.verdict.strategy;
+  return undefined;
+}
+
+function getDetectorIds(result: AnalysisResult): string[] {
+  if ("detectors" in result && Array.isArray(result.detectors))
+    return result.detectors.map((d) => d.detectorId).filter(Boolean);
+  return [];
+}
+
 function formatPrediction(prediction: string): string {
   if (prediction === "likely_ai_generated") return "Likely AI Generated";
   if (prediction === "likely_authentic") return "Likely Authentic";
@@ -56,6 +68,8 @@ export function ResultCard({ result }: ResultCardProps) {
   const score = authenticityScore(prediction, confidence);
   const predictionLabel = formatPrediction(prediction);
   const model = getModel(result);
+  const strategy = getStrategy(result);
+  const detectorIds = getDetectorIds(result);
   const canVerify = buildVerifyPayload(result) != null;
 
   const handleVerify = async () => {
@@ -112,7 +126,15 @@ export function ResultCard({ result }: ResultCardProps) {
           </p>
         </div>
       </div>
-      <p className="mt-4 text-xs text-zinc-400">Detector: {model}</p>
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+        {strategy && (
+          <span>
+            {strategy === "ensemble" ? "Ensemble" : "Single detector"}
+            {strategy === "ensemble" && detectorIds.length > 0 && ` (${detectorIds.join(", ")})`}
+          </span>
+        )}
+        {strategy === "single" && <span>Detector: {model}</span>}
+      </div>
       {result.cached && (
         <p className="mt-2 text-xs text-zinc-400">Served from cache</p>
       )}

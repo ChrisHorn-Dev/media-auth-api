@@ -10,6 +10,9 @@ import {
 
 type Status = "idle" | "uploading" | "done" | "error";
 
+type ImageMode = "single" | "ensemble";
+type DetectorChoice = "" | "huggingface-image-v1" | "huggingface-image-v2";
+
 export default function Home() {
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -17,6 +20,8 @@ export default function Home() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [imageMode, setImageMode] = useState<ImageMode>("single");
+  const [detectorId, setDetectorId] = useState<DetectorChoice>("");
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -27,6 +32,8 @@ export default function Home() {
     if (files.length === 1) {
       const formData = new FormData();
       formData.set("file", files[0]);
+      formData.set("mode", imageMode);
+      if (imageMode === "single" && detectorId) formData.set("detector_id", detectorId);
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",
@@ -56,6 +63,8 @@ export default function Home() {
     for (const file of files) {
       formData.append("files[]", file);
     }
+    formData.set("mode", imageMode);
+    if (imageMode === "single" && detectorId) formData.set("detector_id", detectorId);
     try {
       const res = await fetch("/api/analyze/batch", {
         method: "POST",
@@ -101,6 +110,40 @@ export default function Home() {
             <h2 id="upload-heading" className="sr-only">
               Upload
             </h2>
+            <div className="mb-4 flex w-full max-w-lg flex-wrap items-center gap-4 rounded-lg border border-zinc-200 bg-white px-4 py-3">
+              <span className="text-xs font-medium text-zinc-500">Mode</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImageMode("single")}
+                  className={`rounded px-3 py-1.5 text-sm ${imageMode === "single" ? "bg-zinc-200 font-medium text-zinc-900" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                >
+                  Single
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImageMode("ensemble")}
+                  className={`rounded px-3 py-1.5 text-sm ${imageMode === "ensemble" ? "bg-zinc-200 font-medium text-zinc-900" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
+                >
+                  Ensemble
+                </button>
+              </div>
+              {imageMode === "single" && (
+                <>
+                  <span className="text-xs font-medium text-zinc-500">Detector</span>
+                  <select
+                    value={detectorId}
+                    onChange={(e) => setDetectorId(e.target.value as DetectorChoice)}
+                    className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700"
+                    aria-label="Detector"
+                  >
+                    <option value="">Default</option>
+                    <option value="huggingface-image-v1">v1</option>
+                    <option value="huggingface-image-v2">v2</option>
+                  </select>
+                </>
+              )}
+            </div>
             <UploadCard onUpload={handleUpload} disabled={isUploading} />
           </section>
 

@@ -43,6 +43,16 @@ function getCached(item: BatchResultItem): boolean | undefined {
   if (!r) return undefined;
   return "cached" in r ? r.cached : undefined;
 }
+function getStrategy(item: BatchResultItem): "single" | "ensemble" | undefined {
+  const r = item.record;
+  if (!r || !("verdict" in r)) return undefined;
+  return "strategy" in r.verdict ? r.verdict.strategy : undefined;
+}
+function getDetectorIds(item: BatchResultItem): string[] {
+  const r = item.record;
+  if (!r || !("detectors" in r) || !Array.isArray(r.detectors)) return [];
+  return r.detectors.map((d) => d.detectorId).filter(Boolean);
+}
 
 function formatPrediction(p: string): string {
   if (p === "likely_ai_generated") return "Likely AI Generated";
@@ -127,11 +137,17 @@ function BatchItemRow({ item, index }: { item: BatchResultItem; index: number })
                 {formatConfidence(getConfidence(item)!)}
               </span>
             )}
-            {getCached(item) && (
-              <span className="text-xs text-zinc-400">Served from cache</span>
-            )}
-          </div>
-          {canVerify && (
+                {getCached(item) && (
+                  <span className="text-xs text-zinc-400">Served from cache</span>
+                )}
+                {getStrategy(item) && (
+                  <span className="text-xs text-zinc-400">
+                    {getStrategy(item) === "ensemble" ? "Ensemble" : "Single"}
+                    {getStrategy(item) === "ensemble" && getDetectorIds(item).length > 0 && ` (${getDetectorIds(item).join(", ")})`}
+                  </span>
+                )}
+              </div>
+              {canVerify && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 type="button"
