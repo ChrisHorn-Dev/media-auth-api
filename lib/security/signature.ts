@@ -1,4 +1,5 @@
-import { createHmac, randomUUID } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
+import type { AnalysisRecord, SignedAnalysisRecord } from "@/lib/analysis/types";
 
 export interface SignedPayload {
   analysis_id: string;
@@ -6,11 +7,6 @@ export interface SignedPayload {
   confidence: number;
   model: string;
   timestamp: string;
-}
-
-export interface SignedAnalysisResponse extends SignedPayload {
-  signature: string;
-  cached: boolean;
 }
 
 function getSigningSecret(): string {
@@ -21,7 +17,6 @@ function getSigningSecret(): string {
   return secret;
 }
 
-/** Canonical string used for HMAC; order and format must match in verify. */
 function canonicalString(payload: SignedPayload): string {
   return [
     payload.analysis_id,
@@ -41,28 +36,27 @@ export function signPayload(payload: SignedPayload): string {
 export function verifyPayload(payload: SignedPayload, signature: string): boolean {
   if (!signature || signature.length === 0) return false;
   try {
-    const secret = getSigningSecret();
-    const message = canonicalString(payload);
-    const expected = createHmac("sha256", secret).update(message).digest("hex");
-    return expected.length === signature.length && expected === signature;
+    const expected = signPayload(payload);
+    if (expected.length !== signature.length) return false;
+    const a = Buffer.from(expected, "hex");
+    const b = Buffer.from(signature, "hex");
+    if (a.length !== b.length || a.length === 0) return false;
+    return timingSafeEqual(a, b); // constant-time compare
   } catch {
     return false;
   }
 }
 
-export function createSignedResult(
-  result: { prediction: string; confidence: number; model: string },
-  cached: boolean
-): SignedAnalysisResponse {
-  const analysis_id = randomUUID();
-  const timestamp = new Date().toISOString();
+export function signRecord(record: AnalysisRecord): SignedAnalysisRecord {
+  const model =
+    record.detectors[0]?.model ?? record.verdict.detectorId ?? "unknown";
   const payload: SignedPayload = {
-    analysis_id,
-    prediction: result.prediction,
-    confidence: result.confidence,
-    model: result.model,
-    timestamp,
+    analysis_id: record.analysis_id,
+    timestamp: record.timestamp,
+    prediction: record.verdict.prediction,
+    confidence: record.verdict.confidence,
+    model,
   };
   const signature = signPayload(payload);
-  return { ...payload, signature, cached };
+  return { ...record, signature };
 }

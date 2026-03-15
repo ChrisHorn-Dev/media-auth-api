@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   verifyPayload,
   type SignedPayload,
-} from "@/lib/signature";
+} from "@/lib/security/signature";
 
 export async function POST(request: NextRequest) {
   try {
