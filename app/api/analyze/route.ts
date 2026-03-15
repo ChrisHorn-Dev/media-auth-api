@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSingleAnalysis } from "@/lib/analysis/runAnalysis";
+import { getApiKeyFromRequest, requireApiKey } from "@/lib/auth/apiKey";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rateLimit/rateLimit";
 
 export async function POST(request: NextRequest) {
+  const authError = requireApiKey(request);
+  if (authError) return authError;
+
+  const identifier = getRateLimitIdentifier(request, getApiKeyFromRequest(request));
+  const rate = checkRateLimit(identifier);
+  if (!rate.allowed) {
+    const headers: HeadersInit = {};
+    if (rate.retryAfterSeconds != null) headers["Retry-After"] = String(rate.retryAfterSeconds);
+    return NextResponse.json(
+      { error: "Too many requests", details: "Rate limit exceeded. Try again later." },
+      { status: 429, headers }
+    );
+  }
+
   try {
     if (!process.env.HUGGINGFACE_API_KEY?.length) {
       return NextResponse.json(
@@ -18,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const detectorId = (formData.get("detector_id") as string) || (request.nextUrl.searchParams.get("detector_id") as string) || undefined;
 
     if (!file) {
       return NextResponse.json(
@@ -26,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await runSingleAnalysis(file);
+    const result = await runSingleAnalysis(file, { detectorId });
 
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });

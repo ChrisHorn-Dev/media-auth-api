@@ -3,8 +3,24 @@ import {
   verifyPayload,
   type SignedPayload,
 } from "@/lib/security/signature";
+import { getApiKeyFromRequest, requireApiKey } from "@/lib/auth/apiKey";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rateLimit/rateLimit";
 
 export async function POST(request: NextRequest) {
+  const authError = requireApiKey(request);
+  if (authError) return authError;
+
+  const identifier = getRateLimitIdentifier(request, getApiKeyFromRequest(request));
+  const rate = checkRateLimit(identifier);
+  if (!rate.allowed) {
+    const headers: HeadersInit = {};
+    if (rate.retryAfterSeconds != null) headers["Retry-After"] = String(rate.retryAfterSeconds);
+    return NextResponse.json(
+      { error: "Too many requests", details: "Rate limit exceeded. Try again later." },
+      { status: 429, headers }
+    );
+  }
+
   try {
     if (!process.env.SIGNING_SECRET?.length) {
       return NextResponse.json(
