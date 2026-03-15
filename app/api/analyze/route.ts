@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSingleAnalysis } from "@/lib/analysis/runAnalysis";
 import { getApiKeyFromRequest, requireApiKey } from "@/lib/auth/apiKey";
+import { getImageDetectorIds } from "@/lib/detectors/registry";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rateLimit/rateLimit";
 
 export async function POST(request: NextRequest) {
@@ -39,9 +40,29 @@ export async function POST(request: NextRequest) {
       (request.nextUrl.searchParams.get("detector_id") as string)?.trim() ||
       undefined;
     const fromEnv = clientDetectorId === undefined || clientDetectorId === "";
-    const detectorId = fromEnv
+    let detectorId = fromEnv
       ? process.env.DEFAULT_IMAGE_DETECTOR_ID?.trim() || undefined
       : clientDetectorId;
+
+    const validIds = getImageDetectorIds();
+    if (detectorId && !validIds.includes(detectorId)) {
+      if (fromEnv) {
+        return NextResponse.json(
+          {
+            error: "Server configuration error",
+            details: "DEFAULT_IMAGE_DETECTOR_ID does not match any registered detector",
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json(
+        {
+          error: "Invalid detector_id",
+          details: `Supported detectors: ${validIds.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
 
     const modeParam = (formData.get("mode") as string) || request.nextUrl.searchParams.get("mode") || "";
     const mode = modeParam === "ensemble" ? "ensemble" : "single";

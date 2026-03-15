@@ -6,9 +6,7 @@ The project started as a single-image analysis API with file-hash caching; it ad
 
 Single and batch image analysis (JPEG, PNG, WebP, GIF, max 10 MB), file-hash caching (in-memory or optional file-backed, TTL 5 min), signed responses, `POST /api/verify`, and a minimal test UI.
 
-**Flow:** Validate file → hash → cache or run detector → build record → sign canonical payload (`analysis_id`, `timestamp`, `prediction`, `confidence`, `model`) → return. Verify recomputes HMAC and uses constant-time compare.
-
-**Architecture:** Routes call `lib/analysis/runAnalysis` (input build, orchestrator, sign). Orchestrator uses `lib/cache/resultCache`, `lib/detectors/registry`, and the selected detector; `lib/security/signature` for sign/verify; `lib/media` for types and validation. `lib/detectors/audio` and `lib/detectors/video` are stubs (no detectors).
+Request flow: validate file → hash → cache lookup or run detector → build record → sign canonical payload (`analysis_id`, `timestamp`, `prediction`, `confidence`, `model`) → return. Verify recomputes HMAC and uses constant-time compare. Routes use an orchestrator, detector registry, and cache; `lib/detectors/audio` and `lib/detectors/video` are stubs (no detectors).
 
 ## API
 
@@ -73,6 +71,7 @@ Open http://localhost:3000.
 | `REQUIRE_API_KEY` | No | Set to `true` to require an API key on all `/api/*` routes. |
 | `API_KEYS` | When key required | Comma-separated list of valid keys. Clients send `Authorization: Bearer <key>` or `?api_key=<key>`. |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | No | Max requests per minute per IP (or per key). Default 60. |
+| `DEFAULT_IMAGE_DETECTOR_ID` | No | When client omits `detector_id`, use this detector if set. Must be `huggingface-image-v1` or `huggingface-image-v2`. Invalid value is a server configuration error (500). |
 | `CACHE_DIR` or `CACHE_PERSISTENCE_PATH` | No | If set, cache is stored on disk under this path (TTL 5 min). Restarts reuse the cache. Default when unset: in-memory only. |
 
 Put these in `.env.local`. Missing required values return 500 with a clear message.
@@ -84,7 +83,7 @@ Put these in `.env.local`. Missing required values return 500 with a clear messa
 | `huggingface-image-v1` | Hugging Face image authenticity | `dima806/ai_vs_real_image_detection` |
 | `huggingface-image-v2` | Hugging Face image (alternate) | `capcheck/ai-image-detection` |
 
-**Mode:** `single` (default) runs one detector (chosen by `detector_id` or first compatible). `ensemble` runs all compatible image detectors and aggregates: same prediction → average confidence; differing predictions → conservative verdict (prefer `likely_ai_generated`). Response `verdict.strategy` is `"single"` or `"ensemble"`; `detectors` array holds per-detector results. If `detector_id` is omitted in single mode, the first compatible detector is used. Invalid `detector_id` returns 400. Both models are trained for Real vs Fake/AI-generated classification; performance on very new generators may vary.
+**Mode:** `single` (default) runs one detector. The server uses client `detector_id` when provided; when omitted, it uses `DEFAULT_IMAGE_DETECTOR_ID` if set (must be a valid image detector id), otherwise the first compatible detector. Invalid client `detector_id` returns 400. Invalid `DEFAULT_IMAGE_DETECTOR_ID` (server config) returns 500. `ensemble` runs all compatible image detectors and aggregates: same prediction → average confidence; differing → conservative verdict (prefer `likely_ai_generated`). Response `verdict.strategy` is `"single"` or `"ensemble"`; `detectors` holds per-detector results. Both models are trained for Real vs Fake/AI-generated classification; performance on very new generators may vary.
 
 ### Logging
 
