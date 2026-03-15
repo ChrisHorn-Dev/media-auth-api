@@ -2,12 +2,18 @@ import type { AnalysisInput } from "./types";
 import type { SignedAnalysisRecord } from "./types";
 import { analyze } from "./orchestrator";
 import { signRecord } from "@/lib/security/signature";
-import { validateImageFile } from "@/lib/media/validation";
+import { validateImageFile, validateImageDimensions } from "@/lib/media/validation";
 import { mediaTypeFromMimeOrImage } from "@/lib/media/sniff";
 import { sha256Hex } from "@/lib/hashing/fileHash";
+import { logAnalysis } from "@/lib/logging/analysisLog";
+
+export interface RunAnalysisOptions {
+  detectorId?: string;
+}
 
 export async function runSingleAnalysis(
-  file: File
+  file: File,
+  options: RunAnalysisOptions = {}
 ): Promise<
   | { record: SignedAnalysisRecord }
   | { error: string }
@@ -18,6 +24,10 @@ export async function runSingleAnalysis(
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+  const dimensionError = validateImageDimensions(buffer);
+  if (dimensionError) {
+    return { error: dimensionError };
+  }
   const mimeType = (file.type ?? "").toLowerCase() || "application/octet-stream";
   const mediaType = mediaTypeFromMimeOrImage(mimeType);
   const hash = sha256Hex(buffer);
@@ -31,8 +41,19 @@ export async function runSingleAnalysis(
   };
 
   try {
-    const { record } = await analyze(input);
-    return { record: signRecord(record) };
+    const start = Date.now();
+    const { record, fromCache } = await analyze(input, { detectorId: options.detectorId });
+    const latencyMs = Date.now() - start;
+    const signed = signRecord(record);
+    logAnalysis({
+      event: "analysis",
+      analysis_id: signed.analysis_id,
+      mediaType: record.media.type,
+      cacheHit: fromCache,
+      detectorId: record.verdict.detectorId,
+      latencyMs,
+    });
+    return { record: signed };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Analysis failed";
     return { error: message };
@@ -44,12 +65,13 @@ export type BatchItemResult =
   | { filename: string; error: string };
 
 export async function runBatchAnalysis(
-  files: File[]
+  files: File[],
+  options: RunAnalysisOptions = {}
 ): Promise<{ results: BatchItemResult[] }> {
   const results: BatchItemResult[] = [];
   for (const file of files) {
     const filename = file.name || "unknown";
-    const out = await runSingleAnalysis(file);
+    const out = await runSingleAnalysis(file, options);
     if ("error" in out) {
       results.push({ filename, error: out.error });
     } else {

@@ -1,8 +1,12 @@
 import type { MediaType } from "@/lib/media/types";
 import type { Detector, DetectorInput } from "@/lib/detectors/types";
 import { huggingFaceImageDetector } from "@/lib/detectors/image/huggingFaceImageDetector";
+import { huggingFaceImageDetectorV2 } from "@/lib/detectors/image/huggingFaceImageDetectorV2";
 
-const detectors: Detector[] = [huggingFaceImageDetector];
+const detectors: Detector[] = [
+  huggingFaceImageDetector,
+  huggingFaceImageDetectorV2,
+];
 
 export function registerDetector(detector: Detector): void {
   if (!detectors.find((d) => d.metadata.id === detector.metadata.id)) {

@@ -1,7 +1,10 @@
+import imageSize from "image-size";
 import type { MediaType } from "./types";
 import { MEDIA_TYPE_IMAGE } from "./types";
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const MIN_IMAGE_DIMENSION = 32;
+const MAX_IMAGE_DIMENSION = 4096;
 const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",
   "image/png",
@@ -46,5 +49,28 @@ export function validateImageFile(file: File): string | null {
   return validateMediaFile(file, MEDIA_TYPE_IMAGE);
 }
 
+/** Validates image dimensions (min/max px). Returns error message or null. */
+export function validateImageDimensions(buffer: Buffer): string | null {
+  try {
+    const result = imageSize(new Uint8Array(buffer));
+    const width = result.width ?? result.images?.[0]?.width;
+    const height = result.height ?? result.images?.[0]?.height;
+    if (width == null || height == null) {
+      return "Could not read image dimensions. The file may be corrupted or in an unsupported format.";
+    }
+    if (width < MIN_IMAGE_DIMENSION || height < MIN_IMAGE_DIMENSION) {
+      return `Image is too small. Minimum dimension is ${MIN_IMAGE_DIMENSION} px (got ${width}×${height}).`;
+    }
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+      return `Image is too large. Maximum dimension is ${MAX_IMAGE_DIMENSION} px (got ${width}×${height}).`;
+    }
+    return null;
+  } catch {
+    return "Could not read image dimensions. The file may be corrupted or in an unsupported format.";
+  }
+}
+
 export const MAX_FILE_SIZE_BYTES = MAX_IMAGE_SIZE_BYTES;
 export const ALLOWED_IMAGE_TYPES = [...ALLOWED_IMAGE_MIME_TYPES];
+export const MIN_IMAGE_DIMENSION_PX = MIN_IMAGE_DIMENSION;
+export const MAX_IMAGE_DIMENSION_PX = MAX_IMAGE_DIMENSION;
