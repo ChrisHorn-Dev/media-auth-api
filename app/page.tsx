@@ -22,6 +22,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [imageMode, setImageMode] = useState<ImageMode>("single");
   const [detectorId, setDetectorId] = useState<DetectorChoice>("");
+  const [apiKey, setApiKey] = useState("");
+
+  const authHeaders = (): HeadersInit => {
+    const key = apiKey.trim();
+    return key ? { Authorization: `Bearer ${key}` } : {};
+  };
 
   const handleUpload = async (files: File[]) => {
     setError(null);
@@ -37,6 +43,7 @@ export default function Home() {
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",
+          headers: authHeaders(),
           body: formData,
         });
         const data = (await res.json()) as
@@ -68,6 +75,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/analyze/batch", {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       });
       const data = (await res.json()) as
@@ -143,6 +151,16 @@ export default function Home() {
                   </select>
                 </>
               )}
+              <span className="text-xs font-medium text-zinc-500">API key</span>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="Optional"
+                className="min-w-0 max-w-[12rem] rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-700 placeholder:text-zinc-400"
+                aria-label="API key (optional)"
+                autoComplete="off"
+              />
             </div>
             <UploadCard onUpload={handleUpload} disabled={isUploading} />
           </section>
@@ -184,12 +202,12 @@ export default function Home() {
                 <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
                   Results
                 </h3>
-                <ResultCard result={result} />
+                <ResultCard result={result} apiKey={apiKey.trim() || undefined} />
               </div>
             )}
 
             {!isUploading && batchResults != null && batchResults.length > 0 && (
-              <BatchResultList results={batchResults} />
+              <BatchResultList results={batchResults} apiKey={apiKey.trim() || undefined} />
             )}
 
             {showEmptyState && (

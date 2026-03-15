@@ -19,6 +19,7 @@ type VerifyState = "idle" | "verifying" | "valid" | "invalid";
 
 interface ResultCardProps {
   result: AnalysisResult;
+  apiKey?: string;
 }
 
 function getPrediction(result: AnalysisResult): string {
@@ -59,7 +60,7 @@ function authenticityScore(prediction: string, confidence: number): number {
   return Math.round((1 - confidence) * 100);
 }
 
-export function ResultCard({ result }: ResultCardProps) {
+export function ResultCard({ result, apiKey }: ResultCardProps) {
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
   const [verifyReason, setVerifyReason] = useState<string | null>(null);
 
@@ -78,9 +79,11 @@ export function ResultCard({ result }: ResultCardProps) {
     setVerifyState("verifying");
     setVerifyReason(null);
     try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`;
       const res = await fetch("/api/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as

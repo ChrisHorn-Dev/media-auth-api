@@ -24,6 +24,7 @@ type VerifyState = "idle" | "verifying" | "valid" | "invalid";
 
 interface BatchResultListProps {
   results: BatchResultItem[];
+  apiKey?: string;
 }
 
 function getPrediction(item: BatchResultItem): string | undefined {
@@ -76,7 +77,15 @@ function hasSignature(r: BatchResultItem["record"]): r is VerifiableRecord {
   return r != null && "signature" in r && typeof (r as VerifiableRecord).signature === "string";
 }
 
-function BatchItemRow({ item, index }: { item: BatchResultItem; index: number }) {
+function BatchItemRow({
+  item,
+  index,
+  apiKey,
+}: {
+  item: BatchResultItem;
+  index: number;
+  apiKey?: string;
+}) {
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
   const [verifyReason, setVerifyReason] = useState<string | null>(null);
   const record = item.record;
@@ -88,9 +97,11 @@ function BatchItemRow({ item, index }: { item: BatchResultItem; index: number })
     setVerifyState("verifying");
     setVerifyReason(null);
     try {
+      const headers: HeadersInit = { "Content-Type": "application/json" };
+      if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`;
       const res = await fetch("/api/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
       });
       const data = (await res.json()) as
@@ -172,7 +183,7 @@ function BatchItemRow({ item, index }: { item: BatchResultItem; index: number })
   );
 }
 
-export function BatchResultList({ results }: BatchResultListProps) {
+export function BatchResultList({ results, apiKey }: BatchResultListProps) {
   return (
     <div
       className="w-full max-w-lg rounded-xl border border-zinc-200 bg-zinc-50/50 p-5"
@@ -184,7 +195,7 @@ export function BatchResultList({ results }: BatchResultListProps) {
       </h3>
       <ul className="space-y-4">
         {results.map((item, i) => (
-          <BatchItemRow key={`${item.filename}-${i}`} item={item} index={i} />
+          <BatchItemRow key={`${item.filename}-${i}`} item={item} index={i} apiKey={apiKey} />
         ))}
       </ul>
     </div>
