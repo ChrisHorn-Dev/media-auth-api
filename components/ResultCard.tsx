@@ -1,6 +1,9 @@
 "use client";
 
-export interface AnalysisResult {
+import type { SignedAnalysisRecord } from "@/lib/analysis/types";
+
+export type AnalysisResult = SignedAnalysisRecord | LegacyResult;
+interface LegacyResult {
   analysis_id: string;
   timestamp: string;
   prediction: string;
@@ -12,6 +15,21 @@ export interface AnalysisResult {
 
 interface ResultCardProps {
   result: AnalysisResult;
+}
+
+function getPrediction(result: AnalysisResult): string {
+  if ("verdict" in result) return result.verdict.prediction;
+  return result.prediction;
+}
+function getConfidence(result: AnalysisResult): number {
+  if ("verdict" in result) return result.verdict.confidence;
+  return result.confidence;
+}
+function getModel(result: AnalysisResult): string {
+  if ("detectors" in result && result.detectors?.[0]?.model)
+    return result.detectors[0].model;
+  if ("verdict" in result) return result.verdict.detectorId;
+  return (result as LegacyResult).model;
 }
 
 function formatPrediction(prediction: string): string {
@@ -26,8 +44,11 @@ function authenticityScore(prediction: string, confidence: number): number {
 }
 
 export function ResultCard({ result }: ResultCardProps) {
-  const score = authenticityScore(result.prediction, result.confidence);
-  const predictionLabel = formatPrediction(result.prediction);
+  const prediction = getPrediction(result);
+  const confidence = getConfidence(result);
+  const score = authenticityScore(prediction, confidence);
+  const predictionLabel = formatPrediction(prediction);
+  const model = getModel(result);
 
   return (
     <div
@@ -35,7 +56,7 @@ export function ResultCard({ result }: ResultCardProps) {
       role="region"
       aria-label="Analysis result"
     >
-      <h3 className="text-sm font-medium uppercase tracking-wide text-zinc-500 mb-4">
+      <h3 className="mb-4 text-sm font-medium uppercase tracking-wide text-zinc-500">
         Result
       </h3>
       <div className="space-y-4">
@@ -50,11 +71,11 @@ export function ResultCard({ result }: ResultCardProps) {
         <div>
           <p className="text-xs font-medium text-zinc-500">Confidence</p>
           <p className="text-lg font-mono text-zinc-900">
-            {result.confidence.toFixed(2)}
+            {confidence.toFixed(2)}
           </p>
         </div>
       </div>
-      <p className="mt-4 text-xs text-zinc-400">Model: {result.model}</p>
+      <p className="mt-4 text-xs text-zinc-400">Detector: {model}</p>
       {result.cached && (
         <p className="mt-2 text-xs text-zinc-400">Served from cache</p>
       )}
