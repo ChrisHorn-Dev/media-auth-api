@@ -24,7 +24,7 @@ export async function analyze(
   const mode = options.mode ?? "auto";
   const apiKey = options.apiKey ?? process.env.HUGGINGFACE_API_KEY;
 
-  const cached = resultCache.get(input.hash);
+  const cached = await resultCache.get(input.hash);
   if (cached) {
     const record: AnalysisRecord = {
       analysis_id: createAnalysisId(),
@@ -72,7 +72,7 @@ export async function analyze(
     verdict,
     detectors,
   };
-  resultCache.set(input.hash, cacheable);
+  await resultCache.set(input.hash, cacheable);
 
   const record: AnalysisRecord = {
     analysis_id: createAnalysisId(),
