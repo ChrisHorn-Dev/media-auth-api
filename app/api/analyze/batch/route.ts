@@ -36,7 +36,15 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const files = formData.getAll("files[]") as File[];
-    const detectorId = (formData.get("detector_id") as string) || (request.nextUrl.searchParams.get("detector_id") as string) || undefined;
+    const clientDetectorId =
+      (formData.get("detector_id") as string)?.trim() ||
+      (request.nextUrl.searchParams.get("detector_id") as string)?.trim() ||
+      undefined;
+    const fromEnv = clientDetectorId === undefined || clientDetectorId === "";
+    const detectorId = fromEnv
+      ? process.env.DEFAULT_IMAGE_DETECTOR_ID?.trim() || undefined
+      : clientDetectorId;
+
     const modeParam = (formData.get("mode") as string) || request.nextUrl.searchParams.get("mode") || "";
     const mode = modeParam === "ensemble" ? "ensemble" : "single";
 

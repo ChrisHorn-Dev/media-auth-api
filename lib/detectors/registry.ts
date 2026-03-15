@@ -25,3 +25,7 @@ export function getDetectorById(id: string): Detector | undefined {
 export function getCompatibleDetectors(input: DetectorInput): Detector[] {
   return detectors.filter((d) => d.supports(input));
 }
+
+export function getImageDetectorIds(): string[] {
+  return getDetectorsForMediaType("image").map((d) => d.metadata.id);
+}
