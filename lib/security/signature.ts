@@ -49,7 +49,9 @@ export function verifyPayload(payload: SignedPayload, signature: string): boolea
 
 export function signRecord(record: AnalysisRecord): SignedAnalysisRecord {
   const model =
-    record.detectors[0]?.model ?? record.verdict.detectorId ?? "unknown";
+    record.verdict.strategy === "ensemble"
+      ? "ensemble"
+      : (record.detectors[0]?.model ?? record.verdict.detectorId ?? "unknown");
   const payload: SignedPayload = {
     analysis_id: record.analysis_id,
     timestamp: record.timestamp,

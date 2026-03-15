@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const files = formData.getAll("files[]") as File[];
     const detectorId = (formData.get("detector_id") as string) || (request.nextUrl.searchParams.get("detector_id") as string) || undefined;
+    const modeParam = (formData.get("mode") as string) || request.nextUrl.searchParams.get("mode") || "";
+    const mode = modeParam === "ensemble" ? "ensemble" : "single";
 
     const validFiles = files.filter((f): f is File => f instanceof File);
     if (validFiles.length === 0) {
@@ -52,7 +54,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { results } = await runBatchAnalysis(validFiles, { detectorId });
+    const { results } = await runBatchAnalysis(validFiles, { detectorId, mode });
     return NextResponse.json({ results });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Batch request failed";

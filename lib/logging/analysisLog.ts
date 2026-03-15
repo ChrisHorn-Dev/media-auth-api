@@ -5,6 +5,7 @@ export interface AnalysisLogEntry {
   mediaType: string;
   cacheHit: boolean;
   detectorId: string;
+  strategy: "single" | "ensemble";
   latencyMs: number;
 }
 

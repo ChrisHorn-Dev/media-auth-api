@@ -9,6 +9,7 @@ import { logAnalysis } from "@/lib/logging/analysisLog";
 
 export interface RunAnalysisOptions {
   detectorId?: string;
+  mode?: import("./types").AnalysisRequestMode;
 }
 
 export async function runSingleAnalysis(
@@ -42,7 +43,10 @@ export async function runSingleAnalysis(
 
   try {
     const start = Date.now();
-    const { record, fromCache } = await analyze(input, { detectorId: options.detectorId });
+    const { record, fromCache } = await analyze(input, {
+      detectorId: options.detectorId,
+      mode: options.mode,
+    });
     const latencyMs = Date.now() - start;
     const signed = signRecord(record);
     logAnalysis({
@@ -51,6 +55,7 @@ export async function runSingleAnalysis(
       mediaType: record.media.type,
       cacheHit: fromCache,
       detectorId: record.verdict.detectorId,
+      strategy: record.verdict.strategy,
       latencyMs,
     });
     return { record: signed };

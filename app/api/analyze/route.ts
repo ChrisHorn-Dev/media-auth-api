@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const detectorId = (formData.get("detector_id") as string) || (request.nextUrl.searchParams.get("detector_id") as string) || undefined;
+    const modeParam = (formData.get("mode") as string) || request.nextUrl.searchParams.get("mode") || "";
+    const mode = modeParam === "ensemble" ? "ensemble" : "single";
 
     if (!file) {
       return NextResponse.json(
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await runSingleAnalysis(file, { detectorId });
+    const result = await runSingleAnalysis(file, { detectorId, mode });
 
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });

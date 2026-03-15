@@ -40,6 +40,7 @@ function getConfidence(r: VerifiableRecord): number | undefined {
   return (r as LegacyBatchRecord).confidence;
 }
 function getModel(r: VerifiableRecord): string | undefined {
+  if ("verdict" in r && r.verdict.strategy === "ensemble") return "ensemble";
   if ("detectors" in r && r.detectors?.[0]?.model) return r.detectors[0].model;
   if ("verdict" in r) return r.verdict.detectorId;
   return (r as LegacyRecord & LegacyBatchRecord).model;
