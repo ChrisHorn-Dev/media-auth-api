@@ -18,6 +18,8 @@ Request flow: validate file → hash → cache lookup or run detector → build 
 
 **Verify:** `POST /api/verify` — JSON body: `analysis_id`, `timestamp`, `prediction`, `confidence`, `model`, `signature`. Response: `{ valid: true }` or `{ valid: false, reason }`. Build the payload from the analysis response as in the example below.
 
+**Health:** `GET /api/health` checks `SIGNING_SECRET` and `HUGGINGFACE_API_KEY` and returns 200 when both are set, 500 when either is missing or empty.
+
 **Optional API key:** Set `REQUIRE_API_KEY=true` and `API_KEYS=<key1>,<key2>`. Then all `/api/*` routes require `Authorization: Bearer <key>` or `?api_key=<key>`. Missing or invalid key returns `401` with `{ error: "..." }`.
 
 **Rate limiting:** In-memory per IP (or per API key when provided). Default 60 requests per minute. Over limit returns `429` with `Retry-After` and `{ error: "Too many requests", details: "..." }`. Configure with `RATE_LIMIT_REQUESTS_PER_MINUTE`.
