@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       (request.nextUrl.searchParams.get("detector_id") as string)?.trim() ||
       undefined;
     const fromEnv = clientDetectorId === undefined || clientDetectorId === "";
-    let detectorId = fromEnv
+    const detectorId = fromEnv
       ? process.env.DEFAULT_IMAGE_DETECTOR_ID?.trim() || undefined
       : clientDetectorId;
 
